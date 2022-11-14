@@ -94,6 +94,16 @@ int main(){
             -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
             -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
     };
+    float plane[] = {
+            1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            1.0f, 0.0f, -1.0f,0.0f, 1.0f, 0.0f,
+            -1.0f, 0.0f, -1.0f,0.0f, 1.0f, 0.0f,
+            -1.0f, 0.01, 1.0f, 0.0f, 1.0f, 0.0f
+    };
+    unsigned int indices[] = {
+            0, 1, 2,
+            0, 2, 3
+    };
     glm::vec3 cubePositions[] = {
             glm::vec3( 0.0f,  0.0f,  0.0f),
             glm::vec3( 2.0f,  5.0f, -15.0f),
@@ -108,10 +118,13 @@ int main(){
     };
 
 
-    unsigned VBO, VAO, lightVAO;
+    unsigned VBO, VAO, lightVAO, planeVBO, planeVAO, planeEBO;
     glGenBuffers(1, &VBO);
+    glGenBuffers(1, &planeVBO);
+    glGenBuffers(1, &planeEBO);
     glGenVertexArrays(1, &VAO);
     glGenVertexArrays(1, &lightVAO);
+    glGenVertexArrays(1, &planeVAO);
     glBindVertexArray(lightVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -127,6 +140,18 @@ int main(){
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    glBindVertexArray(planeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(plane), plane, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
 
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -159,6 +184,13 @@ int main(){
         model = glm::translate(model, glm::vec3(1.0f, 1.0f, 0.0f));
         shader.setMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glBindVertexArray(planeVAO);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));
+        shader.setMat4("model", model);
+        shader.setVec3("objectColor", 0.1f, 0.5f, 0.2f);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glBindVertexArray(lightVAO);
         lightSourceShader.use();
