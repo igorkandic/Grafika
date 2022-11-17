@@ -165,8 +165,8 @@ int main(){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use();
         float radius = 3.0f;
-//        lightPosition = glm::vec3(sin(glfwGetTime()) * radius, lightPosition.y, cos(glfwGetTime()) * radius);
-        lightPosition = glm::vec3(2.0f, 2.0f, 2.0f);
+        lightPosition = glm::vec3(sin(glfwGetTime()) * radius, lightPosition.y, lightPosition.z);
+        //lightPosition = glm::vec3(2.0f, 2.0f, 2.0f);
         shader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
         shader.setInt("material.diffusion", 0);
         shader.setInt("material.specular", 1);
@@ -176,6 +176,9 @@ int main(){
         shader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
         shader.setVec3("light.diffusion", 0.5f, 0.5f, 0.5f);
         shader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+        shader.setFloat("light.constant", 1.0f);
+        shader.setFloat("light.linear", 0.09f);
+        shader.setFloat("light.quadratic", 0.032f);
         shader.setVec3("viewPos", cameraPos);
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, .1f, 100.0f);
