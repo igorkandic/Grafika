@@ -104,18 +104,7 @@ int main(){
             0, 1, 2,
             0, 2, 3
     };
-    glm::vec3 cubePositions[] = {
-            glm::vec3( 0.0f,  0.0f,  0.0f),
-            glm::vec3( 2.0f,  5.0f, -15.0f),
-            glm::vec3(-1.5f, -2.2f, -2.5f),
-            glm::vec3(-3.8f, -2.0f, -12.3f),
-            glm::vec3( 2.4f, -0.4f, -3.5f),
-            glm::vec3(-1.7f,  3.0f, -7.5f),
-            glm::vec3( 1.3f, -2.0f, -2.5f),
-            glm::vec3( 1.5f,  2.0f, -2.5f),
-            glm::vec3( 1.5f,  0.2f, -1.5f),
-            glm::vec3(-1.3f,  1.0f, -1.5f)
-    };
+
 
 
     unsigned VBO, VAO, lightVAO, planeVBO, planeVAO, planeEBO;
@@ -169,9 +158,21 @@ int main(){
         shader.use();
         float radius = 3.0f;
         lightPosition = glm::vec3(sin(glfwGetTime()) * radius, lightPosition.y, cos(glfwGetTime()) * radius);
-        shader.setVec3("objectColor", 0.5f, 0.5f, 0.5f);
-        shader.setVec3("lightColor", sin(glfwGetTime()), 1.0f, cos(glfwGetTime()));
-        shader.setVec3("lightPos", lightPosition);
+        glm::vec3 lightColor;
+        lightColor.x = sin(glfwGetTime() * 2.0f);
+        lightColor.y = sin(glfwGetTime() * 0.7f);
+        lightColor.z = sin(glfwGetTime() * 1.7f);
+
+        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
+        glm::vec3 ambientColor = lightColor * glm::vec3(0.2f);
+        shader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+        shader.setVec3("material.diffusion", 1.0f, 0.5f, 0.31f);
+        shader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+        shader.setFloat("material.shininess", 32);
+        shader.setVec3("light.position", lightPosition);
+        shader.setVec3("light.ambient", ambientColor);
+        shader.setVec3("light.diffusion", diffuseColor);
+        shader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
         shader.setVec3("viewPos", cameraPos);
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, .1f, 100.0f);
@@ -194,7 +195,7 @@ int main(){
 
         glBindVertexArray(lightVAO);
         lightSourceShader.use();
-        lightSourceShader.setVec3("Color", sin(glfwGetTime()), 1.0f, cos(glfwGetTime()));
+        lightSourceShader.setVec3("Color", lightColor);
         lightSourceShader.setMat4("view", view);
         lightSourceShader.setMat4("projection", projection);
         model = glm::translate(glm::mat4(1.0f), lightPosition);
