@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <string>
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -174,6 +175,12 @@ int main(){
 
     unsigned int diffuseMap = loadTexture("container2.png");
     unsigned int specularMap = loadTexture("container2_specular.png");
+    const char* vendor = (const char *)(glGetString(GL_VENDOR));
+    if(strcmp(vendor, "NVIDIA") == 0)
+    {
+        std::cout << "F&*K Y(! NVIDIA" << std::endl;
+        return -1;
+    }
     while(!glfwWindowShouldClose(window)){
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
