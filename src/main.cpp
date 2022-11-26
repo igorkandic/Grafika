@@ -54,6 +54,7 @@ int main(){
     Shader shader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs");
     Shader lightSourceShader("shaders/lightSourceVertexShader.vs", "shaders/lightSourceFragmentShader.fs");
     Shader skyboxShader("shaders/cubemap_vertex.vs", "shaders/cubemap_fragment.fs");
+    Shader instanceShader("shaders/instance_vertex.vs", "shaders/instance_fragment.fs");
 
 
     // positions of the point lights
@@ -67,6 +68,8 @@ int main(){
     Model portalObj = Model("resources/objects/portal/portal.obj");
     Model amogusObj = Model("resources/objects/amogus/Among Us2.obj");
     Model cubeObj = Model("resources/objects/cube/cube.obj");
+    Model planetObj = Model("resources/objects/planet/planet.obj");
+    Model rockObj = Model("resources/objects/rock/rock.obj");
 
 
 
@@ -119,6 +122,64 @@ int main(){
             1.0f, -1.0f,  1.0f
     };
 
+    unsigned int amount = 10000;
+    glm::mat4 *modelMatrices;
+    modelMatrices = new glm::mat4[amount];
+    srand(glfwGetTime()); // initialize random seed
+    float radius = 75.0;
+    float offset = 20.0f;
+    for(unsigned int i = 0; i < amount; i++)
+    {
+        glm::mat4 rockModel = glm::mat4(1.0f);
+        // 1. translation: displace along circle with 'radius' in range [-offset, offset]
+        float angle = (float)i / (float)amount * 360.0f;
+        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float y = displacement * 0.4f; // keep height of field smaller compared to width of x and z
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        rockModel = glm::translate(rockModel, glm::vec3(x, y, z));
+
+        // 2. scale: scale between 0.05 and 0.25f
+        float scale = (rand() % 20) / 100.0f + 0.05;
+        rockModel = glm::scale(rockModel, glm::vec3(scale));
+
+        // 3. rotation: add random rotation around a (semi)randomly picked rotation axis vector
+        float rotAngle = (rand() % 360);
+        rockModel = glm::rotate(rockModel, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+        // 4. now add to list of matrices
+        modelMatrices[i] = rockModel;
+    }
+
+    unsigned int buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+    for (unsigned int i = 0; i < rockObj.meshes.size(); i++)
+    {
+        unsigned int VAO = rockObj.meshes[i].VAO;
+        glBindVertexArray(VAO);
+        // set attribute pointers for matrix (4 times vec4)
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+
+        glBindVertexArray(0);
+    }
+
 
     // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
@@ -154,7 +215,7 @@ int main(){
 
         shader.use();
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, .1f, 100.0f);
+        projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, .1f, 100000.0f);
         shader.setMat4("projection", projection);
         glm::mat4 view;
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
@@ -233,6 +294,36 @@ int main(){
         shader.setMat4("model", amogusModel);
         amogusObj.Draw(shader);
 
+
+
+        // draw planet
+        shader.use();
+        glm::mat4 planetModel = glm::mat4(1.0f);
+        planetModel = glm::translate(planetModel, glm::vec3(0.0f, -3.0f, 0.0f));
+        planetModel = glm::scale(planetModel, glm::vec3(4.0f, 4.0f, 4.0f));
+        shader.setMat4("model", planetModel);
+        planetObj.Draw(shader);
+
+        // draw meteorites
+        instanceShader.use();
+        instanceShader.setMat4("projection", projection);
+        instanceShader.setMat4("view", view);
+        instanceShader.setInt("texture_diffuse1", 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, rockObj.textures_loaded[0].id); // note: we also made the textures_loaded vector public (instead of private) from the model class.
+        for (unsigned int i = 0; i < rockObj.meshes.size(); i++)
+        {
+
+            glBindVertexArray(rockObj.meshes[i].VAO);
+//            glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(rockObj.meshes[i].indices.size()), GL_UNSIGNED_INT, 0);
+            glDrawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(rockObj.meshes[i].indices.size()), GL_UNSIGNED_INT, 0, amount);
+            glBindVertexArray(0);
+        }
+//        for(unsigned int i = 0; i < amount; i++)
+//        {
+//            shader.setMat4("model", modelMatrices[i]);
+//            rockObj.Draw(shader);
+//        }
 
         // draw skybox as last
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
