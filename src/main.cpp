@@ -200,6 +200,8 @@ int main(){
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
+
+
     const char* vendor = (const char *)(glGetString(GL_VENDOR));
     if(strcmp(vendor, "NVIDIA") == 0)
     {
@@ -212,6 +214,23 @@ int main(){
         lastFrame = currentFrame;
         processInput(window);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+
+        shader.use();
+        shader.setVec3("viewPos", cameraPos);
+        shader.setFloat("material.shininess", 32.0f);
+        shader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+        shader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+        shader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        shader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+
+        instanceShader.use();
+        instanceShader.setVec3("viewPos", cameraPos);
+        instanceShader.setFloat("material.shininess", 32.0f);
+        instanceShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+        instanceShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+        instanceShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        instanceShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
         shader.use();
         glm::mat4 projection;
@@ -242,6 +261,8 @@ int main(){
         glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
         glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);
         glStencilMask(0xFF);
+        glCullFace(GL_BACK);
+        glEnable(GL_CULL_FACE);
 
         glm::mat4 portalModel = glm::mat4(1.0f);
         portalModel = glm::translate(portalModel, glm::vec3(2.f, 2.f, 0.f));
@@ -266,11 +287,14 @@ int main(){
         shader.setMat4("model", model);
         shader.setMat4("view", destView);
         tardisObj.Draw(shader);
+        glDisable(GL_CULL_FACE);
         shader.setMat4("model", insideModel);
         cubeObj.Draw(shader);
+        glEnable(GL_CULL_FACE);
         shader.setMat4("model", amogusModel);
         amogusObj.Draw(shader);
         shader.setMat4("projection", projection);
+
 
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
@@ -285,12 +309,17 @@ int main(){
 
 
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
         shader.setMat4("model", model);
         shader.setMat4("view", view);
         tardisObj.Draw(shader);
+        glDisable(GL_CULL_FACE);
         shader.setMat4("model", insideModel);
         cubeObj.Draw(shader);
+        glEnable(GL_CULL_FACE);
         shader.setMat4("model", amogusModel);
         amogusObj.Draw(shader);
 
@@ -315,15 +344,10 @@ int main(){
         {
 
             glBindVertexArray(rockObj.meshes[i].VAO);
-//            glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(rockObj.meshes[i].indices.size()), GL_UNSIGNED_INT, 0);
             glDrawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(rockObj.meshes[i].indices.size()), GL_UNSIGNED_INT, 0, amount);
             glBindVertexArray(0);
         }
-//        for(unsigned int i = 0; i < amount; i++)
-//        {
-//            shader.setMat4("model", modelMatrices[i]);
-//            rockObj.Draw(shader);
-//        }
+
 
         // draw skybox as last
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
