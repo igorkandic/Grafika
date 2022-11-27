@@ -17,18 +17,16 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadCubemap(vector<std::string> faces);
 void renderQuad();
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraPos = glm::vec3(30.0f, 5.0f, 0.0f);
+glm::vec3 cameraFront = glm::vec3(-1.0f, 0.0f, 0.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-glm::vec3 lightPosition = glm::vec3(0.0f, 3.0f, 0.0f);
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 float lastX = 400, lastY = 300;
-float yaw = -90.0f, pitch = 0.0f;
+float yaw = -180.0f, pitch = 0.0f;
 bool firstMouse = true;
 float fov = 45.0f;
 float playerSpeed = 2.5f;
-float exposure = .5f;
 int main(){
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -61,11 +59,12 @@ int main(){
     Shader shaderBlur("shaders/blur.vs", "shaders/blur.fs");
 
 
+
     // positions of the point lights
     glm::vec3 pointLightPositions[] = {
-            glm::vec3( 0.0f,  25.f,  0.0f),
+            glm::vec3( -0.02f,  7.6f,  0.0f),
             glm::vec3( 2.3f, -3.3f, -4.0f),
-            glm::vec3(-4.0f,  2.0f, -12.0f),
+            glm::vec3(0.0f,  2.0f, 0.0f),
             glm::vec3( 0.0f,  0.0f, -3.0f)
     };
 
@@ -77,6 +76,7 @@ int main(){
     Model rockObj = Model("resources/objects/rock/rock.obj");
     Model insideObj = Model("resources/objects/inside/inside.obj");
     Model sunObj = Model("resources/objects/sun/sun.obj");
+    Model valjakObj = Model("resources/objects/valjak/valjak.obj");
 
 
 
@@ -276,6 +276,7 @@ int main(){
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glm::vec3 sunPos = glm::vec3(250.f, 100.f, 0.f);
+        glm::vec3 insidePos = glm::vec3(10000.f, 0.f, 0.f);
         shader.use();
         shader.setVec3("viewPos", cameraPos);
         shader.setFloat("material.shininess", 32.0f);
@@ -286,11 +287,11 @@ int main(){
 
         shader.setVec3("pointLights[0].position", pointLightPositions[0]);
         shader.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
-        shader.setVec3("pointLights[0].diffuse", 20.f, 1.f, 1.f);
+        shader.setVec3("pointLights[0].diffuse", (float)(glm::cos(5 * glfwGetTime()) + 1.f) / 2.f * 10.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f);
         shader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
         shader.setFloat("pointLights[0].constant", 1.0f);
-        shader.setFloat("pointLights[0].linear", 0.09f);
-        shader.setFloat("pointLights[0].quadratic", 0.032f);
+        shader.setFloat("pointLights[0].linear", 0.7f);
+        shader.setFloat("pointLights[0].quadratic", 1.8f);
 
         shader.setVec3("pointLights[1].position", sunPos);
         shader.setVec3("pointLights[1].ambient", 0.1f, 0.1f, 0.1f);
@@ -299,6 +300,14 @@ int main(){
         shader.setFloat("pointLights[1].constant", 1.0f);
         shader.setFloat("pointLights[1].linear", 0.2f);
         shader.setFloat("pointLights[1].quadratic", 0.01f);
+
+//        shader.setVec3("pointLights[2].position", insidePos + pointLightPositions[2]);
+//        shader.setVec3("pointLights[2].ambient", 0.1f, 0.1f, 0.1f);
+//        shader.setVec3("pointLights[2].diffuse", 1.f, 1.f, 9.f);
+//        shader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+//        shader.setFloat("pointLights[2].constant", 1.0f);
+//        shader.setFloat("pointLights[2].linear", 0.09f);
+//        shader.setFloat("pointLights[2].quadratic", 0.032f);
 
         instanceShader.use();
         instanceShader.setVec3("viewPos", cameraPos);
@@ -333,7 +342,6 @@ int main(){
         shader.setMat4("view", view);
 
         glm::mat4 insideModel = glm::mat4(1.f);
-        glm::vec3 insidePos = glm::vec3(1000.f, 0.f, 0.f);
         insideModel = glm::translate(insideModel, insidePos);
 
 
@@ -357,7 +365,7 @@ int main(){
         glCullFace(GL_BACK);
         glEnable(GL_CULL_FACE);
 
-        glm::vec3 tardisPos = glm::vec3(0.f, 12.f, 0.f);
+        glm::vec3 tardisPos = glm::vec3(0.f, 17.f, 0.f);
         glm::mat4 portalModel = glm::mat4(1.0f);
         glm::vec3 srcPos = glm::vec3(1.75f, 3.f, 0.f) + tardisPos;
         portalModel = glm::translate(portalModel, srcPos);
@@ -377,21 +385,36 @@ int main(){
         glStencilOp(GL_DECR, GL_KEEP, GL_KEEP);
         glm::mat4 clippedProjection;
         clippedProjection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, glm::distance(cameraPos, srcPos), 100.0f);
+
+//        glm::mat4 blueLightModel = glm::translate(glm::mat4(1.f), insidePos + pointLightPositions[2]);
+////        blueLightModel = glm::scale(blueLightModel, glm::vec3(2.f, 0.2f, 2.f));
+//        lightSourceShader.setMat4("model", blueLightModel);
+//        lightSourceShader.setMat4("view", destView);
+//        lightSourceShader.setMat4("projection", clippedProjection);
+//        lightSourceShader.setVec3("brightness", glm::vec3(0.1f, 0.1f, 1.f));
+//        valjakObj.Draw(lightSourceShader);
+//        lightSourceShader.setMat4("projection", projection);
+//        lightSourceShader.setMat4("view", view);
+//TODO plavo svetlo u tardisu fixati da ne obasjava celu planetu
+
         shader.setMat4("projection", clippedProjection);
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, tardisPos);
         model = glm::rotate(model, glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f));
         shader.setMat4("model", model);
         shader.setMat4("view", destView);
-        tardisObj.Draw(shader);
+//        tardisObj.Draw(shader);
         glDisable(GL_CULL_FACE);
 //        glEnable(GL_BLEND);
         shader.setMat4("model", insideModel);
         insideObj.Draw(shader);
 //        glDisable(GL_BLEND);
         glEnable(GL_CULL_FACE);
-        shader.setMat4("model", amogusModel);
-        amogusObj.Draw(shader);
+//        shader.setMat4("model", amogusModel);
+//        amogusObj.Draw(shader);
+
+
+
         shader.setMat4("projection", projection);
 
 
@@ -416,14 +439,14 @@ int main(){
         shader.setMat4("model", model);
         shader.setMat4("view", view);
         tardisObj.Draw(shader);
-        glDisable(GL_CULL_FACE);
-//        glEnable(GL_BLEND);
-        shader.setMat4("model", insideModel);
-        insideObj.Draw(shader);
-//        glDisable(GL_BLEND);
-        glEnable(GL_CULL_FACE);
-        shader.setMat4("model", amogusModel);
-        amogusObj.Draw(shader);
+//        glDisable(GL_CULL_FACE);
+////        glEnable(GL_BLEND);
+//        shader.setMat4("model", insideModel);
+//        insideObj.Draw(shader);
+////        glDisable(GL_BLEND);
+//        glEnable(GL_CULL_FACE);
+//        shader.setMat4("model", amogusModel);
+//        amogusObj.Draw(shader);
 
 
 
@@ -432,7 +455,7 @@ int main(){
         shader.use();
         glm::mat4 planetModel = glm::mat4(1.0f);
         planetModel = glm::translate(planetModel, glm::vec3(0.0f, -3.0f, 0.0f));
-        planetModel = glm::scale(planetModel, glm::vec3(4.0f, 4.0f, 4.0f));
+        planetModel = glm::scale(planetModel, glm::vec3(6.0f, 6.0f, 6.0f));
         shader.setMat4("model", planetModel);
         planetObj.Draw(shader);
         glm::mat4 sunModel = glm::mat4(1.f);
@@ -446,9 +469,11 @@ int main(){
         lightSourceShader.setVec3("brightness", glm::vec3(50.f, 40.f, 3.f));
         sunObj.Draw(lightSourceShader);
 
-        lightSourceShader.setMat4("model", glm::translate(glm::mat4(1.f), pointLightPositions[0]));
-        lightSourceShader.setVec3("brightness", glm::vec3(20.f, 1.f, 1.f));
-        cubeObj.Draw(lightSourceShader);
+        glm::mat4 redLightModel = glm::translate(glm::mat4(1.f), tardisPos + pointLightPositions[0]);
+        redLightModel = glm::scale(redLightModel, glm::vec3(0.2f, 0.2f, 0.2f));
+        lightSourceShader.setMat4("model", redLightModel);
+        lightSourceShader.setVec3("brightness", glm::vec3((float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 10.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f));
+        valjakObj.Draw(lightSourceShader);
 
         // draw meteorites
         instanceShader.use();
