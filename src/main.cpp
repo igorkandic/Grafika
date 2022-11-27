@@ -62,7 +62,7 @@ int main(){
 
     // positions of the point lights
     glm::vec3 pointLightPositions[] = {
-            glm::vec3( 0.7f,  0.2f,  2.0f),
+            glm::vec3( 0.0f,  25.f,  0.0f),
             glm::vec3( 2.3f, -3.3f, -4.0f),
             glm::vec3(-4.0f,  2.0f, -12.0f),
             glm::vec3( 0.0f,  0.0f, -3.0f)
@@ -239,6 +239,7 @@ int main(){
 
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glm::vec3 sunPos = glm::vec3(250.f, 100.f, 0.f);
         shader.use();
         shader.setVec3("viewPos", cameraPos);
         shader.setFloat("material.shininess", 32.0f);
@@ -247,6 +248,22 @@ int main(){
         shader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
         shader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
+        shader.setVec3("pointLights[0].position", pointLightPositions[0]);
+        shader.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
+        shader.setVec3("pointLights[0].diffuse", 20.f, 1.f, 1.f);
+        shader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+        shader.setFloat("pointLights[0].constant", 1.0f);
+        shader.setFloat("pointLights[0].linear", 0.09f);
+        shader.setFloat("pointLights[0].quadratic", 0.032f);
+
+        shader.setVec3("pointLights[1].position", sunPos);
+        shader.setVec3("pointLights[1].ambient", 0.1f, 0.1f, 0.1f);
+        shader.setVec3("pointLights[1].diffuse", 50.f, 40.f, 3.f);
+        shader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+        shader.setFloat("pointLights[1].constant", 1.0f);
+        shader.setFloat("pointLights[1].linear", 0.2f);
+        shader.setFloat("pointLights[1].quadratic", 0.01f);
+
         instanceShader.use();
         instanceShader.setVec3("viewPos", cameraPos);
         instanceShader.setFloat("material.shininess", 32.0f);
@@ -254,6 +271,22 @@ int main(){
         instanceShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
         instanceShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
         instanceShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+
+        instanceShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+        instanceShader.setVec3("pointLights[0].ambient", 0.0f, 0.0f, 0.f);
+        instanceShader.setVec3("pointLights[0].diffuse", 20.f, 1.f, 1.f);
+        instanceShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+        instanceShader.setFloat("pointLights[0].constant", 1.0f);
+        instanceShader.setFloat("pointLights[0].linear", 0.09f);
+        instanceShader.setFloat("pointLights[0].quadratic", 0.032f);
+
+        instanceShader.setVec3("pointLights[1].position", sunPos);
+        instanceShader.setVec3("pointLights[1].ambient", 0.1f, 0.1f, 0.1f);
+        instanceShader.setVec3("pointLights[1].diffuse", 50.f, 40.f, 3.f);
+        instanceShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+        instanceShader.setFloat("pointLights[1].constant", 1.0f);
+        instanceShader.setFloat("pointLights[1].linear", 0.2f);
+        instanceShader.setFloat("pointLights[1].quadratic", 0.01f);
 
         shader.use();
         glm::mat4 projection;
@@ -275,7 +308,7 @@ int main(){
 
         glm::mat4 destModel = glm::mat4(1.f);
         destModel = glm::translate(destModel, insidePos + glm::vec3(5.5, 1.5, -2.65));
-        glm::vec3 sunPos = glm::vec3(250.f, 100.f, 0.f);
+
 
 
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -316,8 +349,10 @@ int main(){
         shader.setMat4("view", destView);
         tardisObj.Draw(shader);
         glDisable(GL_CULL_FACE);
+//        glEnable(GL_BLEND);
         shader.setMat4("model", insideModel);
         insideObj.Draw(shader);
+//        glDisable(GL_BLEND);
         glEnable(GL_CULL_FACE);
         shader.setMat4("model", amogusModel);
         amogusObj.Draw(shader);
@@ -339,14 +374,17 @@ int main(){
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDisable(GL_BLEND);
 
 
         shader.setMat4("model", model);
         shader.setMat4("view", view);
         tardisObj.Draw(shader);
         glDisable(GL_CULL_FACE);
+//        glEnable(GL_BLEND);
         shader.setMat4("model", insideModel);
         insideObj.Draw(shader);
+//        glDisable(GL_BLEND);
         glEnable(GL_CULL_FACE);
         shader.setMat4("model", amogusModel);
         amogusObj.Draw(shader);
@@ -365,7 +403,16 @@ int main(){
         sunModel = glm::translate(sunModel, sunPos);
         sunModel = glm::scale(sunModel, glm::vec3(20.0f, 20.0f, 20.0f));
         shader.setMat4("model", sunModel);
-        sunObj.Draw(shader);
+        lightSourceShader.use();
+        lightSourceShader.setMat4("projection", projection);
+        lightSourceShader.setMat4("view", view);
+        lightSourceShader.setMat4("model", sunModel);
+        lightSourceShader.setVec3("brightness", glm::vec3(50.f, 40.f, 3.f));
+        sunObj.Draw(lightSourceShader);
+
+        lightSourceShader.setMat4("model", glm::translate(glm::mat4(1.f), pointLightPositions[0]));
+        lightSourceShader.setVec3("brightness", glm::vec3(20.f, 1.f, 1.f));
+        cubeObj.Draw(lightSourceShader);
 
         // draw meteorites
         instanceShader.use();
@@ -398,7 +445,7 @@ int main(){
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         hdrShader.use();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorBuffer);

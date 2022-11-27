@@ -1,9 +1,21 @@
 #version 330 core
+
+in vec3 Normal;
+in vec3 FragPos;
+in vec2 TexCoords;
+
+
+struct Material{
+    sampler2D texture_diffuse1;
+};
+
 out vec4 FragColor;
 
-uniform vec3 Color;
+uniform Material material;
+uniform vec3 brightness;
 
 void main()
 {
-    FragColor = vec4(Color, 1.0); // set all 4 vector values to 1.0
+    FragColor = texture(material.texture_diffuse1, TexCoords) * vec4(brightness, 1.0);
 }
+
