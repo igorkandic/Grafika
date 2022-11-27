@@ -16,6 +16,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadCubemap(vector<std::string> faces);
 
+
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -27,6 +28,7 @@ float yaw = -90.0f, pitch = 0.0f;
 bool firstMouse = true;
 float fov = 45.0f;
 float playerSpeed = 2.5f;
+
 int main(){
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -64,12 +66,15 @@ int main(){
             glm::vec3(-4.0f,  2.0f, -12.0f),
             glm::vec3( 0.0f,  0.0f, -3.0f)
     };
+
     Model tardisObj = Model("resources/objects/War tardis/War tardis.obj");
     Model portalObj = Model("resources/objects/portal/portal.obj");
     Model amogusObj = Model("resources/objects/amogus/Among Us2.obj");
     Model cubeObj = Model("resources/objects/cube/cube.obj");
     Model planetObj = Model("resources/objects/planet/planet.obj");
     Model rockObj = Model("resources/objects/rock/rock.obj");
+    Model insideObj = Model("resources/objects/inside/inside.obj");
+    Model sunObj = Model("resources/objects/sun/sun.obj");
 
 
 
@@ -121,7 +126,6 @@ int main(){
             -1.0f, -1.0f,  1.0f,
             1.0f, -1.0f,  1.0f
     };
-
     unsigned int amount = 10000;
     glm::mat4 *modelMatrices;
     modelMatrices = new glm::mat4[amount];
@@ -152,6 +156,7 @@ int main(){
         // 4. now add to list of matrices
         modelMatrices[i] = rockModel;
     }
+
 
     unsigned int buffer;
     glGenBuffers(1, &buffer);
@@ -201,13 +206,6 @@ int main(){
     skyboxShader.setInt("skybox", 0);
 
 
-
-    const char* vendor = (const char *)(glGetString(GL_VENDOR));
-    if(strcmp(vendor, "NVIDIA") == 0)
-    {
-        std::cout << "F&*K Y(! NVIDIA" << std::endl;
-        return -1;
-    }
     while(!glfwWindowShouldClose(window)){
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -241,8 +239,8 @@ int main(){
         shader.setMat4("view", view);
 
         glm::mat4 insideModel = glm::mat4(1.f);
-        insideModel = glm::translate(insideModel, glm::vec3(25.f, 0.f, 0.f));
-        insideModel = glm::scale(insideModel, glm::vec3(5.f, 5.f, 5.f));
+        glm::vec3 insidePos = glm::vec3(1000.f, 0.f, 0.f);
+        insideModel = glm::translate(insideModel, insidePos);
 
 
         glm::mat4 amogusModel = glm::mat4(1.f);
@@ -251,7 +249,8 @@ int main(){
         amogusModel = glm::rotate(amogusModel, (float)glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f));
 
         glm::mat4 destModel = glm::mat4(1.f);
-        destModel = glm::translate(destModel, glm::vec3(22.0, 2.5, 0.0));
+        destModel = glm::translate(destModel, insidePos + glm::vec3(5.5, 1.5, -2.65));
+        glm::vec3 sunPos = glm::vec3(250.f, 100.f, 0.f);
 
 
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -264,13 +263,15 @@ int main(){
         glCullFace(GL_BACK);
         glEnable(GL_CULL_FACE);
 
+        glm::vec3 tardisPos = glm::vec3(0.f, 12.f, 0.f);
         glm::mat4 portalModel = glm::mat4(1.0f);
-        portalModel = glm::translate(portalModel, glm::vec3(2.f, 2.f, 0.f));
-        portalModel = glm::scale(portalModel, glm::vec3(2.f, 2.f, 2.f));
+        glm::vec3 srcPos = glm::vec3(1.75f, 3.f, 0.f) + tardisPos;
+        portalModel = glm::translate(portalModel, srcPos);
+        portalModel = glm::scale(portalModel, glm::vec3(2.f, 3.f, 2.8f));
         shader.setMat4("model", portalModel);
         portalObj.Draw(shader);
 
-        glm::mat4 destView = view * portalModel * glm::rotate(glm::mat4(1.0), glm::radians(180.0f), glm::vec3(0.0,1.0,0.0)) * glm::inverse(destModel);
+        glm::mat4 destView = view * portalModel * glm::rotate(glm::mat4(1.0), glm::radians(-90.0f), glm::vec3(0.0,1.0,0.0)) * glm::inverse(destModel);
 
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         glDepthMask(GL_TRUE);
@@ -281,15 +282,17 @@ int main(){
         glStencilFunc(GL_EQUAL, 1, 0xFF);
         glStencilOp(GL_DECR, GL_KEEP, GL_KEEP);
         glm::mat4 clippedProjection;
-        clippedProjection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, glm::distance(cameraPos, glm::vec3(2.f, 2.f, 0.f)), 100.0f);
+        clippedProjection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, glm::distance(cameraPos, srcPos), 100.0f);
         shader.setMat4("projection", clippedProjection);
         glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, tardisPos);
+        model = glm::rotate(model, glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f));
         shader.setMat4("model", model);
         shader.setMat4("view", destView);
         tardisObj.Draw(shader);
         glDisable(GL_CULL_FACE);
         shader.setMat4("model", insideModel);
-        cubeObj.Draw(shader);
+        insideObj.Draw(shader);
         glEnable(GL_CULL_FACE);
         shader.setMat4("model", amogusModel);
         amogusObj.Draw(shader);
@@ -318,10 +321,11 @@ int main(){
         tardisObj.Draw(shader);
         glDisable(GL_CULL_FACE);
         shader.setMat4("model", insideModel);
-        cubeObj.Draw(shader);
+        insideObj.Draw(shader);
         glEnable(GL_CULL_FACE);
         shader.setMat4("model", amogusModel);
         amogusObj.Draw(shader);
+
 
 
 
@@ -332,6 +336,11 @@ int main(){
         planetModel = glm::scale(planetModel, glm::vec3(4.0f, 4.0f, 4.0f));
         shader.setMat4("model", planetModel);
         planetObj.Draw(shader);
+        glm::mat4 sunModel = glm::mat4(1.f);
+        sunModel = glm::translate(sunModel, sunPos);
+        sunModel = glm::scale(sunModel, glm::vec3(20.0f, 20.0f, 20.0f));
+        shader.setMat4("model", sunModel);
+        sunObj.Draw(shader);
 
         // draw meteorites
         instanceShader.use();
@@ -361,8 +370,6 @@ int main(){
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // set depth function back to default
-
-
 
 
         glfwPollEvents();
@@ -489,40 +496,4 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-}
-unsigned int loadTexture(char const * path)
-{
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
-    int width, height, nrComponents;
-    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
-    if (data)
-    {
-        GLenum format;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if (nrComponents == 3)
-            format = GL_RGB;
-        else if (nrComponents == 4)
-            format = GL_RGBA;
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
-    }
-    else
-    {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
-    }
-
-    return textureID;
 }
