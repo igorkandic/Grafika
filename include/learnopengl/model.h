@@ -6,9 +6,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <stb_image.h>
-#include <assimp_/Importer.hpp>
-#include <assimp_/scene.h>
-#include <assimp_/postprocess.h>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <learnopengl/mesh.h>
 #include <learnopengl/shader.h>
