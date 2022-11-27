@@ -11,7 +11,7 @@ FIND_PATH( ASSIMP_INCLUDE_DIR assimp/mesh.h
 	/opt/local/include
 	${CMAKE_SOURCE_DIR}/include
 )
-else(IF UNIX AND NOT APPLE)
+else(UNIX AND NOT APPLE)
 	FIND_PATH( ASSIMP_INCLUDE_DIR assimp_/mesh.h
 			/usr/include
 			/usr/local/include
