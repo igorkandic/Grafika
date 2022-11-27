@@ -270,6 +270,10 @@ int main(){
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         processInput(window);
+
+
+
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 
@@ -477,6 +481,9 @@ int main(){
 
         // draw meteorites
         instanceShader.use();
+        glm::mat4 rotateMat = glm::mat4(1.f);
+        rotateMat = glm::rotate(rotateMat, (float)glfwGetTime() / 5.f, glm::vec3(0.f, 1.f, 0.f));
+        instanceShader.setMat4("rotate", rotateMat);
         instanceShader.setMat4("projection", projection);
         instanceShader.setMat4("view", view);
         instanceShader.setInt("texture_diffuse1", 0);
