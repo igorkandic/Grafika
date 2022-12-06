@@ -5,6 +5,7 @@ layout (location = 1) out vec4 BrightColor;
 in vec3 Normal;
 in vec3 FragPos;
 in vec2 TexCoords;
+in mat3 TBN;
 
 struct DirLight{
     vec3 direction;
@@ -42,6 +43,7 @@ struct SpotLight {
 struct Material{
     sampler2D texture_diffuse1;
     sampler2D texture_specular1;
+    sampler2D texture_normal1;
     float shininess;
 };
 
@@ -61,6 +63,13 @@ vec4 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 void main()
 {
     vec3 norm = normalize(Normal);
+//         vec3 norm;
+//         norm = texture(material.texture_normal1, TexCoords).rgb;
+//         norm = norm * 2.0 - 1.0;
+//         norm = normalize(TBN * norm);
+
+
+
     vec3 viewDir = normalize(viewPos - FragPos);
 
     vec4 result = vec4(0.f, 0.f, 0.f, 1.f);//CalcDirLight(dirLight, norm, viewDir);

@@ -75,6 +75,7 @@ int main(){
     Shader instanceShader("shaders/instance_vertex.vs", "shaders/instance_fragment.fs");
     Shader hdrShader("shaders/hdr.vs", "shaders/hdr.fs");
     Shader shaderBlur("shaders/blur.vs", "shaders/blur.fs");
+    Shader normalShader("shaders/normal_vertex.vs", "shaders/normal_fragment.fs");
 
 
 
@@ -475,6 +476,54 @@ int main(){
         shader.setFloat("pointLights[2].linear", 0.09f);
         shader.setFloat("pointLights[2].quadratic", 0.032f);
 
+        normalShader.use();
+        normalShader.setVec3("viewPos", cameraPos);
+        normalShader.setFloat("material.shininess", 32.0f);
+        //nema direkcionog jer je sunce premalo pa nema smisla??(valjda)
+        normalShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+        normalShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+        normalShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        normalShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+
+        //tardis light - point
+        normalShader.setVec3("pointLights[0].position", tardisLightPos);
+        normalShader.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
+        normalShader.setVec3("pointLights[0].diffuse", (float)(glm::cos(tardisLightSpeed * glfwGetTime()) + 1.f) / 2.f * tardisLightColor[0] * 10.f, (float)(glm::cos(tardisLightSpeed *glfwGetTime()) + 1.f) / 2.f * tardisLightColor[1] * 10.f, (float)(glm::cos(tardisLightSpeed *glfwGetTime()) + 1.f) / 2.f * tardisLightColor[2] * 10.f);
+        normalShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+        normalShader.setFloat("pointLights[0].constant", 1.0f);
+        normalShader.setFloat("pointLights[0].linear", 0.7f);
+        normalShader.setFloat("pointLights[0].quadratic", 1.8f);
+
+        //sun light - point
+        normalShader.setVec3("pointLights[1].position", sunPos);
+        normalShader.setVec3("pointLights[1].ambient", 0.1f, 0.1f, 0.1f);
+        normalShader.setVec3("pointLights[1].diffuse", 50.f, 40.f, 3.f);
+        normalShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+        normalShader.setFloat("pointLights[1].constant", 1.0f);
+        normalShader.setFloat("pointLights[1].linear", 0.2f);
+        normalShader.setFloat("pointLights[1].quadratic", 0.01f);
+
+        //lamp light - spotlight
+        normalShader.setVec3("spotLight.position", lampPos);
+        normalShader.setVec3("spotLight.direction", lampDirection);
+        normalShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(lampCutOff)));
+        normalShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(lampOuterCutOff)));
+        normalShader.setFloat("spotLight.constant", lampConstant);
+        normalShader.setFloat("spotLight.linear", lampLinear);
+        normalShader.setFloat("spotLight.quadratic", lampQuadratic);
+        normalShader.setVec3("spotLight.ambient", lampAmbient);
+        normalShader.setVec3("spotLight.diffuse", lampDiffuse);
+        normalShader.setVec3("spotLight.specular", lampSpecular);
+        //inside tardis - point
+
+        normalShader.setVec3("pointLights[2].position", insidePos + pointLightPositions[2]);
+        normalShader.setVec3("pointLights[2].ambient", 0.1f, 0.1f, 0.1f);
+        normalShader.setVec3("pointLights[2].diffuse", .8f, .8f, .8f);
+        normalShader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+        normalShader.setFloat("pointLights[2].constant", 1.0f);
+        normalShader.setFloat("pointLights[2].linear", 0.09f);
+        normalShader.setFloat("pointLights[2].quadratic", 0.032f);
+
         instanceShader.use();
         instanceShader.setVec3("viewPos", cameraPos);
         instanceShader.setFloat("material.shininess", 32.0f);
@@ -688,12 +737,16 @@ int main(){
         shader.setMat4("model", groundModel);
         groundObj.Draw(shader);
 
+        normalShader.use();
+        normalShader.setMat4("projection", secondClippedProjection);
+        normalShader.setMat4("view", secondDestView);
         glm::mat4 sofaModel = glm::mat4(1.0f);
         sofaModel = glm::translate(sofaModel, sofaPos);
         sofaModel = glm::scale(sofaModel, glm::vec3(sofaSize, sofaSize, sofaSize));
         sofaModel = glm::rotate(sofaModel, glm::radians(sofaRotation), glm::vec3(0.f, 1.f, 0.f));
-        shader.setMat4("model", sofaModel);
-        sofaObj.Draw(shader);
+        normalShader.setMat4("model", sofaModel);
+        sofaObj.Draw(normalShader);
+        shader.use();
 
         glm::mat4 catModel = glm::mat4(1.0f);
         catModel = glm::translate(catModel, catPos);
@@ -762,11 +815,15 @@ int main(){
 
 
         //ovde crtamo ostatak scene
+        normalShader.use();
+        normalShader.setMat4("projection", projection);
+        normalShader.setMat4("model", model);
+        normalShader.setMat4("view", view);
+        tardisObj.Draw(normalShader);
         shader.use();
         shader.setMat4("projection", projection);
         shader.setMat4("model", model);
         shader.setMat4("view", view);
-        tardisObj.Draw(shader);
 //        glDisable(GL_CULL_FACE);
         glEnable(GL_BLEND);
         shader.setMat4("model", insideModel);
@@ -785,12 +842,16 @@ int main(){
 
         groundObj.Draw(shader);
 
+        normalShader.use();
+        normalShader.setMat4("projection", projection);
+        normalShader.setMat4("view", view);
          sofaModel = glm::mat4(1.0f);
         sofaModel = glm::translate(sofaModel, sofaPos);
         sofaModel = glm::scale(sofaModel, glm::vec3(sofaSize, sofaSize, sofaSize));
         sofaModel = glm::rotate(sofaModel, glm::radians(sofaRotation), glm::vec3(0.f, 1.f, 0.f));
-        shader.setMat4("model", sofaModel);
-        sofaObj.Draw(shader);
+        normalShader.setMat4("model", sofaModel);
+        sofaObj.Draw(normalShader);
+        shader.use();
 
          catModel = glm::mat4(1.0f);
         catModel = glm::translate(catModel, catPos);
