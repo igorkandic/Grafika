@@ -15,5 +15,6 @@ Projekat za fakultet
 # Oblasti
 - Skybox
 - HDR/Bloom
+- Instancing
 
 https://en.wikibooks.org/wiki/OpenGL_Programming/Mini-Portal#Portal_collision_detection_and_warp
