@@ -64,14 +64,14 @@ void main()
 
     vec4 result = CalcDirLight(dirLight, norm, viewDir);
 
-    for(int i = 0; i < NR_POINT_LIGHTS; i++)
-    {
-            result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
-    }
+//     for(int i = 0; i < NR_POINT_LIGHTS; i++)
+//     {
+//             result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
+//     }
 
 //     result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
-    FragColor = result;
+    FragColor = vec4(10.f, 0.f, 0.f, 1.f);//result;
 
      float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
     if(brightness > 1.0)

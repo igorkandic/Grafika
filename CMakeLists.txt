@@ -30,7 +30,9 @@ find_package(GLM REQUIRED)
 find_package(GLFW3 REQUIRED)
 find_package(ASSIMP REQUIRED)
 
-#add_subdirectory(libs/glad)
+add_subdirectory(libs/glad)
+add_subdirectory(libs/imgui)
+
 
 add_definitions(${OPENGL_DEFINITIONS})
 
@@ -38,7 +40,7 @@ add_definitions(${OPENGL_DEFINITIONS})
 
 set(OpenGL_GL_PREFERENCE GLVND)
 if(WIN32)
-    set(LIBS glfw3 opengl32 assimp freetype irrKlang)
+    set(LIBS glfw3 glad opengl32 assimp freetype irrKlang imgui)
 elseif(UNIX AND NOT APPLE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
     find_package(OpenGL REQUIRED)
@@ -46,7 +48,7 @@ elseif(UNIX AND NOT APPLE)
     find_package(X11 REQUIRED)
     # note that the order is important for setting the libs
     # use pkg-config --libs $(pkg-config --print-requires --print-requires-private glfw3) in a terminal to confirm
-    set(LIBS ${GLFW3_LIBRARY} X11 Xrandr Xinerama Xi Xxf86vm Xcursor GL dl pthread freetype ${ASSIMP_LIBRARY})
+    set(LIBS ${GLFW3_LIBRARY} glad X11 Xrandr Xinerama Xi Xxf86vm Xcursor GL dl pthread freetype ${ASSIMP_LIBRARY} imgui)
     set (CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
 elseif(APPLE)
     INCLUDE_DIRECTORIES(/System/Library/Frameworks)
@@ -69,8 +71,9 @@ include_directories(${CMAKE_BINARY_DIR}/configuration)
 add_library(STB_IMAGE "${CMAKE_SOURCE_DIR}/libs/stb_image.cpp")
 set(LIBS ${LIBS} STB_IMAGE)
 
-add_library(GLAD include/glad/glad.h libs/glad.c)
-set(LIBS ${LIBS} GLAD)
+#add_library(GLAD include/glad/glad.h libs/glad.c)
+#set(LIBS ${LIBS} GLAD)
+
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

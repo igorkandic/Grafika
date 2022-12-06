@@ -29,7 +29,7 @@ struct SpotLight {
     vec3 position;
     vec3 direction;
     float cutOff;
-    float focus;
+    float outerCutOff;
 
     float constant;
     float linear;
@@ -47,7 +47,7 @@ struct Material{
 
 
 
-#define NR_POINT_LIGHTS 2
+#define NR_POINT_LIGHTS 3
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform DirLight dirLight;
 uniform SpotLight spotLight;
@@ -63,14 +63,14 @@ void main()
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
 
-    vec4 result = CalcDirLight(dirLight, norm, viewDir);
+    vec4 result = vec4(0.f, 0.f, 0.f, 1.f);//CalcDirLight(dirLight, norm, viewDir);
 
     for(int i = 0; i < NR_POINT_LIGHTS; i++)
     {
             result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
     }
 
-//     result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+    result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
     FragColor = result;
 
@@ -132,10 +132,9 @@ vec4 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // spotlight intensity
-//     float theta = dot(lightDir, normalize(-light.direction));
-//     float epsilon = light.cutOff - light.outerCutOff;
-//     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
-    float intensity = pow(max(dot(normalize(-light.direction), lightDir), 0.0), light.focus); //* sign(dot(normalize(-light.direction), lightDir) - light.cutOff);
+    float theta = dot(lightDir, normalize(-light.direction));
+    float epsilon = light.cutOff - light.outerCutOff;
+    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     // combine results
     vec4 ambient = vec4(light.ambient, 1.f) * texture(material.texture_diffuse1, TexCoords);
     vec4 diffuse = vec4(light.diffuse, 1.f) * diff * texture(material.texture_diffuse1, TexCoords);

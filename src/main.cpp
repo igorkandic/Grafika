@@ -1,3 +1,6 @@
+#include "imgui.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_impl_glfw.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -9,13 +12,18 @@
 #include <string>
 #include <learnopengl/model.h>
 
+#define WIDTH 1280
+#define HEIGHT 720
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadCubemap(vector<std::string> faces);
 void renderQuad();
+int portal_intersection(glm::vec4 la, glm::vec4 lb, Model* portal, glm::mat4 portalModel);
 
 glm::vec3 cameraPos = glm::vec3(30.0f, 5.0f, 0.0f);
 glm::vec3 cameraFront = glm::vec3(-1.0f, 0.0f, 0.0f);
@@ -26,14 +34,14 @@ float lastX = 400, lastY = 300;
 float yaw = -180.0f, pitch = 0.0f;
 bool firstMouse = true;
 float fov = 45.0f;
-float playerSpeed = 2.5f;
+float playerSpeed = 4.5f;
 int main(){
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "base project", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "base project", NULL, NULL);
     if(window == nullptr)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -43,12 +51,22 @@ int main(){
 
     glfwMakeContextCurrent(window);
 
+
+
     if(!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
-    glViewport(0, 0, 800, 600);
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+    glViewport(0, 0, WIDTH, HEIGHT);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     Shader shader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs");
@@ -60,23 +78,21 @@ int main(){
 
 
 
-    // positions of the point lights
-    glm::vec3 pointLightPositions[] = {
-            glm::vec3( -0.02f,  7.6f,  0.0f),
-            glm::vec3( 2.3f, -3.3f, -4.0f),
-            glm::vec3(0.0f,  2.0f, 0.0f),
-            glm::vec3( 0.0f,  0.0f, -3.0f)
-    };
 
-    Model tardisObj = Model("resources/objects/War tardis/War tardis.obj");
+
+
+    Model tardisObj = Model("resources/objects/tardis/tardis.obj");
     Model portalObj = Model("resources/objects/portal/portal.obj");
     Model amogusObj = Model("resources/objects/amogus/Among Us2.obj");
     Model cubeObj = Model("resources/objects/cube/cube.obj");
-    Model planetObj = Model("resources/objects/planet/planet.obj");
+    Model planetObj = Model("resources/objects/earth/earth.obj");
     Model rockObj = Model("resources/objects/rock/rock.obj");
     Model insideObj = Model("resources/objects/inside/inside.obj");
     Model sunObj = Model("resources/objects/sun/sun.obj");
     Model valjakObj = Model("resources/objects/valjak/valjak.obj");
+    Model groundObj = Model("resources/objects/ground/ground.obj");
+    Model sofaObj = Model("resources/objects/sofa/sofa.obj");
+    Model catObj = Model("resources/objects/cat/cat.obj");
 
 
 
@@ -169,7 +185,7 @@ int main(){
     {
         glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
         glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RGBA16F, 800, 600, 0, GL_RGBA, GL_FLOAT, NULL
+                GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL
         );
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -184,7 +200,7 @@ int main(){
     unsigned int rboDepthStencil;
     glGenRenderbuffers(1, &rboDepthStencil);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepthStencil);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800, 600);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
     // attach buffers
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboDepthStencil);
@@ -203,7 +219,7 @@ int main(){
         glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
         glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i]);
         glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RGBA16F, 800, 600, 0, GL_RGBA, GL_FLOAT, NULL
+                GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL
         );
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -256,6 +272,7 @@ int main(){
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetKeyCallback(window, key_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
     skyboxShader.use();
@@ -265,7 +282,54 @@ int main(){
     hdrShader.setInt("scene", 0);
     hdrShader.setInt("bloomBlur", 1);
 
+    bool show_window = true;
+    bool noclip = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    // positions of the point lights
+    glm::vec3 pointLightPositions[] = {
+            glm::vec3( -0.02f,  7.6f,  0.0f),
+            glm::vec3( 2.3f, -3.3f, -4.0f),
+            glm::vec3(0.0f,  2.0f, 0.0f),
+            glm::vec3( 0.0f,  0.0f, -3.0f)
+    };
+
+    //scene data
+    glm::vec3 sunPos = glm::vec3(250.f, 100.f, 0.f);
+    float sunSize = 20.f;
+
+    glm::vec3 tardisLightPos = glm::vec3( -0.02f,  7.6f,  0.0f);
+    glm::vec3 tardisLightColor = glm::vec3(1.f, 0.f, 0.f);
+    float tardisLightSpeed = 5.f;
+    glm::vec3 tardisPos = glm::vec3(0.f, 0.f, 0.f);
+
+    glm::vec3 groundPos = glm::vec3(0.f, 0.f, 0.f);
+    float groundSize = 50.f;
+
+    glm::vec3 planetPos = glm::vec3(-250.f, 100.f, 0.f);
+    float planetSize = 20.f;
+
+    glm::vec3 catPos = glm::vec3(5.f, 0.f, 8.f);
+    float catSize = 0.2f;
+    float catRotation = 228.984f;
+
+    glm::vec3 sofaPos = glm::vec3(6.f, 0.f, 9.f);
+    float sofaSize = 0.3f;
+    float sofaRotation = 47.213f;
+
+    glm::vec3 lampPosition = glm::vec3(5.159f, 3.820f, -3.297f);
+    glm::vec3 lampDirection = glm::vec3(0.f, -1.f, 0.f);
+    float lampCutOff =  25.672f;
+    float lampOuterCutOff = 54.5f;
+    float lampConstant = 1.f;
+    float lampLinear = 0.09f;
+    float lampQuadratic = 0.032;
+    glm::vec3 lampAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+    glm::vec3 lampDiffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+    glm::vec3 lampSpecular = glm::vec3(1.f, 1.f, 1.f);
+
     while(!glfwWindowShouldClose(window)){
+        glm::vec4 oldCameraPos = glm::vec4(cameraPos, 1.f);
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -274,29 +338,113 @@ int main(){
 
 
 
+
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_window)
+        {
+            ImGui::Begin("Settings");
+            ImGui::Checkbox("No Clip", &noclip);
+            ImGui::Text("Sun");
+            ImGui::InputFloat3("Sun Position", (float*)&sunPos);
+            ImGui::SliderFloat("Sun size", &sunSize, 1.f, 100.f);
+            ImGui::Text("Tardis");
+            ImGui::ColorEdit3("Tardis Light Color", (float*)&tardisLightColor);
+            ImGui::SliderFloat("Tardis Light Speed", &tardisLightSpeed, 1.f, 10.f);
+            ImGui::InputFloat3("Tardis Position", (float*)&tardisPos);
+            ImGui::Text("Earth");
+            ImGui::InputFloat3("Earth position", (float*)&planetPos);
+            ImGui::SliderFloat("Earth size", &planetSize, 1.f, 100.f);
+            ImGui::Text("Asteroids");
+            ImGui::Text("Sofa");
+            ImGui::InputFloat3("Sofa position", (float*)&sofaPos);
+            ImGui::SliderFloat("Sofa size", &sofaSize, .1f, 2.f);
+            ImGui::SliderFloat("Sofa rotation", &sofaRotation, 0, 360);
+            ImGui::Text("Drawing table");
+            ImGui::InputFloat3("Drawing table position", (float*)&catPos);
+            ImGui::SliderFloat("Drawing table size", &catSize, .1f, 2.f);
+            ImGui::SliderFloat("Drawing table rotation", &catRotation, 0, 360);
+            ImGui::Text("Ground");
+            ImGui::InputFloat3("Ground origin", (float*)&groundPos);
+            ImGui::SliderFloat("Ground size", &groundSize, 1.f, 100.f);
+            ImGui::Text("Lighting");
+            ImGui::Text("Lamp");
+            ImGui::SliderFloat3("Lamp position", (float*)&lampPosition, -20, 20);
+            ImGui::SliderFloat3("Lamp direction", (float*)&lampDirection, -1, 1);
+            ImGui::SliderFloat("Lamp cut off", (float*)&lampCutOff, 0, 90);
+            ImGui::SliderFloat("Lamp outer cut off", (float*)&lampOuterCutOff, 0, 90);
+
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::Text("X: %.3f, Y: %.3f, Z: %.3f", cameraPos[0], cameraPos[1], cameraPos[2]);
+            ImGui::End();
+        }
+
+//        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+//        {
+//            static float f = 0.0f;
+//            static int counter = 0;
+//
+//            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+//
+//            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+//            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+//            ImGui::Checkbox("Another Window", &show_another_window);
+//
+//            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+//            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+//
+//            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+//                counter++;
+//            ImGui::SameLine();
+//            ImGui::Text("counter = %d", counter);
+//
+//            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+//            ImGui::End();
+//        }
+//
+//        // 3. Show another simple window.
+//        if (show_another_window)
+//        {
+//            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+//            ImGui::Text("Hello from another window!");
+//            if (ImGui::Button("Close Me"))
+//                show_another_window = false;
+//            ImGui::End();
+//        }
+
+
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glm::vec3 sunPos = glm::vec3(250.f, 100.f, 0.f);
+
         glm::vec3 insidePos = glm::vec3(10000.f, 0.f, 0.f);
         shader.use();
         shader.setVec3("viewPos", cameraPos);
         shader.setFloat("material.shininess", 32.0f);
+        //nema direkcionog jer je sunce premalo pa nema smisla??(valjda)
         shader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
         shader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
         shader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
         shader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
-        shader.setVec3("pointLights[0].position", pointLightPositions[0]);
+        //tardis light - point
+        shader.setVec3("pointLights[0].position", tardisLightPos);
         shader.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
-        shader.setVec3("pointLights[0].diffuse", (float)(glm::cos(5 * glfwGetTime()) + 1.f) / 2.f * 10.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f);
+        shader.setVec3("pointLights[0].diffuse", (float)(glm::cos(tardisLightSpeed * glfwGetTime()) + 1.f) / 2.f * tardisLightColor[0] * 10.f, (float)(glm::cos(tardisLightSpeed *glfwGetTime()) + 1.f) / 2.f * tardisLightColor[1] * 10.f, (float)(glm::cos(tardisLightSpeed *glfwGetTime()) + 1.f) / 2.f * tardisLightColor[2] * 10.f);
         shader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
         shader.setFloat("pointLights[0].constant", 1.0f);
         shader.setFloat("pointLights[0].linear", 0.7f);
         shader.setFloat("pointLights[0].quadratic", 1.8f);
 
+        //sun light - point
         shader.setVec3("pointLights[1].position", sunPos);
         shader.setVec3("pointLights[1].ambient", 0.1f, 0.1f, 0.1f);
         shader.setVec3("pointLights[1].diffuse", 50.f, 40.f, 3.f);
@@ -305,13 +453,27 @@ int main(){
         shader.setFloat("pointLights[1].linear", 0.2f);
         shader.setFloat("pointLights[1].quadratic", 0.01f);
 
-//        shader.setVec3("pointLights[2].position", insidePos + pointLightPositions[2]);
-//        shader.setVec3("pointLights[2].ambient", 0.1f, 0.1f, 0.1f);
-//        shader.setVec3("pointLights[2].diffuse", 1.f, 1.f, 9.f);
-//        shader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-//        shader.setFloat("pointLights[2].constant", 1.0f);
-//        shader.setFloat("pointLights[2].linear", 0.09f);
-//        shader.setFloat("pointLights[2].quadratic", 0.032f);
+        //lamp light - spotlight
+        glm::vec3 lampPos = catPos + lampPosition;
+        shader.setVec3("spotLight.position", lampPos);
+        shader.setVec3("spotLight.direction", lampDirection);
+        shader.setFloat("spotLight.cutOff", glm::cos(glm::radians(lampCutOff)));
+        shader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(lampOuterCutOff)));
+        shader.setFloat("spotLight.constant", lampConstant);
+        shader.setFloat("spotLight.linear", lampLinear);
+        shader.setFloat("spotLight.quadratic", lampQuadratic);
+        shader.setVec3("spotLight.ambient", lampAmbient);
+        shader.setVec3("spotLight.diffuse", lampDiffuse);
+        shader.setVec3("spotLight.specular", lampSpecular);
+        //inside tardis - point
+
+        shader.setVec3("pointLights[2].position", insidePos + pointLightPositions[2]);
+        shader.setVec3("pointLights[2].ambient", 0.1f, 0.1f, 0.1f);
+        shader.setVec3("pointLights[2].diffuse", .8f, .8f, .8f);
+        shader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+        shader.setFloat("pointLights[2].constant", 1.0f);
+        shader.setFloat("pointLights[2].linear", 0.09f);
+        shader.setFloat("pointLights[2].quadratic", 0.032f);
 
         instanceShader.use();
         instanceShader.setVec3("viewPos", cameraPos);
@@ -322,12 +484,12 @@ int main(){
         instanceShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
         instanceShader.setVec3("pointLights[0].position", pointLightPositions[0]);
-        instanceShader.setVec3("pointLights[0].ambient", 0.0f, 0.0f, 0.f);
-        instanceShader.setVec3("pointLights[0].diffuse", 20.f, 1.f, 1.f);
+        instanceShader.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
+        instanceShader.setVec3("pointLights[0].diffuse", (float)(glm::cos(5 * glfwGetTime()) + 1.f) / 2.f * 10.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f);
         instanceShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
         instanceShader.setFloat("pointLights[0].constant", 1.0f);
-        instanceShader.setFloat("pointLights[0].linear", 0.09f);
-        instanceShader.setFloat("pointLights[0].quadratic", 0.032f);
+        instanceShader.setFloat("pointLights[0].linear", 0.7f);
+        instanceShader.setFloat("pointLights[0].quadratic", 1.8f);
 
         instanceShader.setVec3("pointLights[1].position", sunPos);
         instanceShader.setVec3("pointLights[1].ambient", 0.1f, 0.1f, 0.1f);
@@ -339,7 +501,7 @@ int main(){
 
         shader.use();
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, .1f, 100000.0f);
+        projection = glm::perspective(glm::radians(fov), 1280.0f / 720.0f, .1f, 10000.0f);
         shader.setMat4("projection", projection);
         glm::mat4 view;
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
@@ -349,13 +511,10 @@ int main(){
         insideModel = glm::translate(insideModel, insidePos);
 
 
-        glm::mat4 amogusModel = glm::mat4(1.f);
-        amogusModel = glm::translate(amogusModel, glm::vec3(25.f, 0.f, 0.f));
-        amogusModel = glm::scale(amogusModel, glm::vec3(0.3f, .3f, .3f));
-        amogusModel = glm::rotate(amogusModel, (float)glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f));
-
         glm::mat4 destModel = glm::mat4(1.f);
         destModel = glm::translate(destModel, insidePos + glm::vec3(5.5, 1.5, -2.65));
+
+
 
 
 
@@ -363,19 +522,69 @@ int main(){
         glDepthMask(GL_FALSE);
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+        glStencilFunc(GL_NEVER, 0, 0xFF);
         glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);
         glStencilMask(0xFF);
         glCullFace(GL_BACK);
         glEnable(GL_CULL_FACE);
 
-        glm::vec3 tardisPos = glm::vec3(0.f, 17.f, 0.f);
+
         glm::mat4 portalModel = glm::mat4(1.0f);
         glm::vec3 srcPos = glm::vec3(1.75f, 3.f, 0.f) + tardisPos;
         portalModel = glm::translate(portalModel, srcPos);
         portalModel = glm::scale(portalModel, glm::vec3(2.f, 3.f, 2.8f));
         shader.setMat4("model", portalModel);
         portalObj.Draw(shader);
+
+        glm::mat4 secondPortalModel = glm::mat4(1.f);
+        glm::vec3 secondSrcPos = insidePos + glm::vec3(5.5, 1.5, -2.65);
+        secondPortalModel = glm::translate(secondPortalModel, secondSrcPos);
+        secondPortalModel = glm::scale(secondPortalModel, glm::vec3(1.4f, 1.5f, 1.4f));
+        secondPortalModel = glm::rotate(secondPortalModel, glm::radians(-90.f), glm::vec3(0.f, 1.f, 0.f));
+
+
+
+
+        glm::vec4 la = oldCameraPos;
+        glm::vec4 lb = glm::vec4(cameraPos, 1.f);
+        if (portal_intersection(la, lb, &portalObj, portalModel))
+        {
+            //teleportuj
+            std::cout << glfwGetTime() <<" proso !\n";
+
+            cameraPos = destModel * glm::vec4(0.f, 0.f, 0.f, 1.f);
+            cameraPos[0]+=0.1f;
+            cameraFront = glm::rotate(glm::mat4(1.f), glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f)) * glm::vec4(cameraFront, 0.f);
+            cameraFront = glm::normalize(cameraFront);
+            yaw -= 90.f;
+            shader.use();
+            glm::mat4 projection;
+            projection = glm::perspective(glm::radians(fov), 1280.0f / 720.0f, .1f, 10000.0f);
+            shader.setMat4("projection", projection);
+            glm::mat4 view;
+            view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+            shader.setMat4("view", view);
+        }
+        //kolizija za drugi portal
+        if (portal_intersection(la, lb, &portalObj, secondPortalModel))
+        {
+            //teleportuj
+            std::cout << glfwGetTime() <<" proso !\n";
+
+            cameraPos = portalModel * glm::vec4(0.f, 0.f, 0.f, 1.f);
+            cameraPos[0] += 0.1;
+            cameraPos[1] = 5.f;
+            cameraFront = glm::rotate(glm::mat4(1.f), glm::radians(-90.f), glm::vec3(0.f, 1.f, 0.f)) * glm::vec4(cameraFront, 0.f);
+            cameraFront = glm::normalize(cameraFront);
+            yaw += 90.f;
+            shader.use();
+            glm::mat4 projection;
+            projection = glm::perspective(glm::radians(fov), 1280.0f / 720.0f, .1f, 10000.0f);
+            shader.setMat4("projection", projection);
+            glm::mat4 view;
+            view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+            shader.setMat4("view", view);
+        }
 
         glm::mat4 destView = view * portalModel * glm::rotate(glm::mat4(1.0), glm::radians(-90.0f), glm::vec3(0.0,1.0,0.0)) * glm::inverse(destModel);
 
@@ -388,7 +597,7 @@ int main(){
         glStencilFunc(GL_EQUAL, 1, 0xFF);
         glStencilOp(GL_DECR, GL_KEEP, GL_KEEP);
         glm::mat4 clippedProjection;
-        clippedProjection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, glm::distance(cameraPos, srcPos), 100.0f);
+        clippedProjection = glm::perspective(glm::radians(fov), 1280.0f / 720.0f, glm::distance(cameraPos, srcPos), 100.0f);
 
 //        glm::mat4 blueLightModel = glm::translate(glm::mat4(1.f), insidePos + pointLightPositions[2]);
 ////        blueLightModel = glm::scale(blueLightModel, glm::vec3(2.f, 0.2f, 2.f));
@@ -399,7 +608,6 @@ int main(){
 //        valjakObj.Draw(lightSourceShader);
 //        lightSourceShader.setMat4("projection", projection);
 //        lightSourceShader.setMat4("view", view);
-//TODO plavo svetlo u tardisu fixati da ne obasjava celu planetu
 
         shader.setMat4("projection", clippedProjection);
         glm::mat4 model = glm::mat4(1.0f);
@@ -409,13 +617,12 @@ int main(){
         shader.setMat4("view", destView);
 //        tardisObj.Draw(shader);
         glDisable(GL_CULL_FACE);
-//        glEnable(GL_BLEND);
+        glEnable(GL_BLEND);
         shader.setMat4("model", insideModel);
         insideObj.Draw(shader);
-//        glDisable(GL_BLEND);
+        glDisable(GL_BLEND);
         glEnable(GL_CULL_FACE);
 //        shader.setMat4("model", amogusModel);
-//        amogusObj.Draw(shader);
 
 
 
@@ -433,6 +640,119 @@ int main(){
         shader.setMat4("view", view);
         portalObj.Draw(shader);
 
+        shader.setMat4("model", secondPortalModel);
+        portalObj.Draw(shader);
+
+
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDisable(GL_BLEND);
+
+        //za drugi portal
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthMask(GL_FALSE);
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_NEVER, 0, 0xFF);
+        glStencilOp(GL_INCR, GL_KEEP, GL_KEEP);
+        glStencilMask(0xFF);
+        glCullFace(GL_BACK);
+        glEnable(GL_CULL_FACE);
+
+        shader.use();
+        shader.setMat4("model", secondPortalModel);
+        portalObj.Draw(shader);
+
+        glm::mat4 secondDestView = view * secondPortalModel * glm::rotate(glm::mat4(1.0), glm::radians(180.0f), glm::vec3(0.0,1.0,0.0)) * glm::inverse(portalModel);
+
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDepthMask(GL_TRUE);
+
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_STENCIL_TEST);
+        glStencilMask(0xFF);
+        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        glStencilOp(GL_DECR, GL_KEEP, GL_KEEP);
+        glm::mat4 secondClippedProjection;
+        secondClippedProjection = glm::perspective(glm::radians(fov), 1280.0f / 720.0f, glm::distance(cameraPos, secondSrcPos), 10000.0f);
+
+
+
+        shader.setMat4("projection", secondClippedProjection);
+        shader.setMat4("view", secondDestView);
+        //ovde se crta sve sto se vidi iz drugog
+        glm::mat4 groundModel = glm::mat4(1.0f);
+        groundModel = glm::translate(groundModel, groundPos);
+        groundModel = glm::scale(groundModel,glm::vec3(groundSize,groundSize,groundSize));
+        shader.setMat4("model", groundModel);
+        groundObj.Draw(shader);
+
+        glm::mat4 sofaModel = glm::mat4(1.0f);
+        sofaModel = glm::translate(sofaModel, sofaPos);
+        sofaModel = glm::scale(sofaModel, glm::vec3(sofaSize, sofaSize, sofaSize));
+        sofaModel = glm::rotate(sofaModel, glm::radians(sofaRotation), glm::vec3(0.f, 1.f, 0.f));
+        shader.setMat4("model", sofaModel);
+        sofaObj.Draw(shader);
+
+        glm::mat4 catModel = glm::mat4(1.0f);
+        catModel = glm::translate(catModel, catPos);
+        catModel = glm::scale(catModel, glm::vec3(catSize, catSize, catSize));
+        catModel = glm::rotate(catModel, glm::radians(catRotation), glm::vec3(0.f, 1.f, 0.f));
+        shader.setMat4("model", catModel);
+        catObj.Draw(shader);
+
+        glm::mat4 sunModel = glm::mat4(1.f);
+        sunModel = glm::translate(sunModel, sunPos);
+        sunModel = glm::scale(sunModel, glm::vec3(sunSize, sunSize, sunSize));
+        shader.setMat4("model", sunModel);
+        lightSourceShader.use();
+        lightSourceShader.setMat4("projection", secondClippedProjection);
+        lightSourceShader.setMat4("view", secondDestView);
+        lightSourceShader.setMat4("model", sunModel);
+        lightSourceShader.setVec3("brightness", glm::vec3(50.f, 40.f, 3.f));
+        sunObj.Draw(lightSourceShader);
+
+        glm::mat4 lampLightModel = glm::translate(glm::mat4(1.f), lampPos);
+        lampLightModel = glm::scale(lampLightModel, glm::vec3(0.1f, 0.1f, 0.1f));
+        lightSourceShader.setMat4("model", lampLightModel);
+        lightSourceShader.setVec3("brightness", glm::vec3(5.f, 0.5, 5.f));
+        valjakObj.Draw(lightSourceShader);
+
+
+        // draw skybox as last
+        glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+        skyboxShader.use();
+        skyboxShader.setMat4("view", glm::rotate(glm::mat4(glm::mat3(secondDestView)),(float)glfwGetTime() * 0.01f, glm::vec3(1.0f, 1.0f , 0.0f)));
+        skyboxShader.setMat4("projection", secondClippedProjection);
+        // skybox cube
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS); // set depth function back to default
+
+
+
+        shader.use();
+        shader.setMat4("projection", projection);
+
+
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+
+        glEnable(GL_DEPTH_TEST);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_STENCIL_TEST);
+
+        shader.setMat4("view", view);
+        shader.setMat4("model", secondPortalModel);
+        portalObj.Draw(shader);
+
+        shader.setMat4("model", portalModel);
+        portalObj.Draw(shader);
+
 
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         glEnable(GL_BLEND);
@@ -440,31 +760,55 @@ int main(){
         glDisable(GL_BLEND);
 
 
+
+        //ovde crtamo ostatak scene
+        shader.use();
+        shader.setMat4("projection", projection);
         shader.setMat4("model", model);
         shader.setMat4("view", view);
         tardisObj.Draw(shader);
 //        glDisable(GL_CULL_FACE);
-////        glEnable(GL_BLEND);
-//        shader.setMat4("model", insideModel);
-//        insideObj.Draw(shader);
-////        glDisable(GL_BLEND);
+        glEnable(GL_BLEND);
+        shader.setMat4("model", insideModel);
+        insideObj.Draw(shader);
+        glDisable(GL_BLEND);
 //        glEnable(GL_CULL_FACE);
 //        shader.setMat4("model", amogusModel);
 //        amogusObj.Draw(shader);
 
 
+        shader.use();
+        groundModel = glm::mat4(1.0f);
+        groundModel = glm::translate(groundModel, groundPos);
+        groundModel = glm::scale(groundModel,glm::vec3(groundSize,groundSize,groundSize));
+        shader.setMat4("model", groundModel);
 
+        groundObj.Draw(shader);
+
+         sofaModel = glm::mat4(1.0f);
+        sofaModel = glm::translate(sofaModel, sofaPos);
+        sofaModel = glm::scale(sofaModel, glm::vec3(sofaSize, sofaSize, sofaSize));
+        sofaModel = glm::rotate(sofaModel, glm::radians(sofaRotation), glm::vec3(0.f, 1.f, 0.f));
+        shader.setMat4("model", sofaModel);
+        sofaObj.Draw(shader);
+
+         catModel = glm::mat4(1.0f);
+        catModel = glm::translate(catModel, catPos);
+        catModel = glm::scale(catModel, glm::vec3(catSize, catSize, catSize));
+        catModel = glm::rotate(catModel, glm::radians(catRotation), glm::vec3(0.f, 1.f, 0.f));
+        shader.setMat4("model", catModel);
+        catObj.Draw(shader);
 
         // draw planet
         shader.use();
         glm::mat4 planetModel = glm::mat4(1.0f);
-        planetModel = glm::translate(planetModel, glm::vec3(0.0f, -3.0f, 0.0f));
-        planetModel = glm::scale(planetModel, glm::vec3(6.0f, 6.0f, 6.0f));
+        planetModel = glm::translate(planetModel, planetPos);
+        planetModel = glm::scale(planetModel, glm::vec3(planetSize,planetSize,planetSize));
         shader.setMat4("model", planetModel);
         planetObj.Draw(shader);
-        glm::mat4 sunModel = glm::mat4(1.f);
+        sunModel = glm::mat4(1.f);
         sunModel = glm::translate(sunModel, sunPos);
-        sunModel = glm::scale(sunModel, glm::vec3(20.0f, 20.0f, 20.0f));
+        sunModel = glm::scale(sunModel, glm::vec3(sunSize, sunSize, sunSize));
         shader.setMat4("model", sunModel);
         lightSourceShader.use();
         lightSourceShader.setMat4("projection", projection);
@@ -473,16 +817,23 @@ int main(){
         lightSourceShader.setVec3("brightness", glm::vec3(50.f, 40.f, 3.f));
         sunObj.Draw(lightSourceShader);
 
-        glm::mat4 redLightModel = glm::translate(glm::mat4(1.f), tardisPos + pointLightPositions[0]);
-        redLightModel = glm::scale(redLightModel, glm::vec3(0.2f, 0.2f, 0.2f));
-        lightSourceShader.setMat4("model", redLightModel);
-        lightSourceShader.setVec3("brightness", glm::vec3((float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 10.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f, (float)(glm::cos(5 *glfwGetTime()) + 1.f) / 2.f * 1.f));
+        glm::mat4 tardisLightModel = glm::translate(glm::mat4(1.f), tardisPos + tardisLightPos);
+        tardisLightModel = glm::scale(tardisLightModel, glm::vec3(0.2f, 0.2f, 0.2f));
+        lightSourceShader.setMat4("model", tardisLightModel);
+        lightSourceShader.setVec3("brightness", glm::vec3((float)(glm::cos(tardisLightSpeed *glfwGetTime()) + 1.f) / 2.f * tardisLightColor[0] * 10.f, (float)(glm::cos(tardisLightSpeed *glfwGetTime()) + 1.f) / 2.f * tardisLightColor[1] * 10.f, (float)(glm::cos(tardisLightSpeed *glfwGetTime()) + 1.f) / 2.f * tardisLightColor[2] * 10.f));
+        valjakObj.Draw(lightSourceShader);
+
+        lampLightModel = glm::translate(glm::mat4(1.f), lampPos);
+        lampLightModel = glm::scale(lampLightModel, glm::vec3(0.1f, 0.1f, 0.1f));
+        lightSourceShader.setMat4("model", lampLightModel);
+        lightSourceShader.setVec3("brightness", glm::vec3(5.f, 0.5, 5.f));
         valjakObj.Draw(lightSourceShader);
 
         // draw meteorites
         instanceShader.use();
         glm::mat4 rotateMat = glm::mat4(1.f);
-        rotateMat = glm::rotate(rotateMat, (float)glfwGetTime() / 5.f, glm::vec3(0.f, 1.f, 0.f));
+        rotateMat = glm::rotate(rotateMat, (float)glfwGetTime() / 10.f, glm::vec3(0.f, 1.f, 0.f));
+        rotateMat = glm::translate(rotateMat, glm::vec3(0.f, 100.f, 0.f));
         instanceShader.setMat4("rotate", rotateMat);
         instanceShader.setMat4("projection", projection);
         instanceShader.setMat4("view", view);
@@ -537,6 +888,10 @@ int main(){
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
         renderQuad();
+
+        // Rendering
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwPollEvents();
         glfwSwapBuffers(window);
@@ -604,6 +959,7 @@ void renderQuad()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 }
+bool in_menu = false;
 void processInput(GLFWwindow* window)
 {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -618,7 +974,7 @@ void processInput(GLFWwindow* window)
     }
     if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE)
     {
-        playerSpeed = 2.5f;
+        playerSpeed = 4.5f;
         fov = 45.0f;
     }
     float cameraSpeed = playerSpeed * deltaTime;
@@ -640,13 +996,30 @@ void processInput(GLFWwindow* window)
     {
         cameraPos += glm::normalize(glm::cross(front, cameraUp)) * cameraSpeed;
     }
-    if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+//    if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+//    {
+//        cameraPos += glm::vec3(0.0f, cameraSpeed, 0.0f);
+//    }
+//    if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+//    {
+//        cameraPos -= glm::vec3(0.0f, cameraSpeed, 0.0f);
+//    }
+}
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if(key == GLFW_KEY_P && action == GLFW_PRESS)
     {
-        cameraPos += glm::vec3(0.0f, cameraSpeed, 0.0f);
-    }
-    if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-    {
-        cameraPos -= glm::vec3(0.0f, cameraSpeed, 0.0f);
+        if(in_menu)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetCursorPosCallback(window, mouse_callback);
+        }
+        else
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetCursorPosCallback(window, nullptr);
+        }
+        in_menu = !in_menu;
     }
 }
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
@@ -690,4 +1063,49 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+/**
+ * Checks whether the line defined by two points la and lb intersects
+ * the portal.
+ */
+int portal_intersection(glm::vec4 la, glm::vec4 lb, Model* portal, glm::mat4 portalModel) {
+    if (la != lb) {  // camera moved
+        // Check for intersection with each of the portal's 2 front triangles
+        std::vector<std::vector<glm::vec3>> triangles(2, std::vector<glm::vec3>(3));
+        triangles[0][0]=portal->meshes[0].vertices[0].Position;
+        triangles[0][1]=portal->meshes[0].vertices[1].Position;
+        triangles[0][2]=portal->meshes[0].vertices[2].Position;
+
+        triangles[1][0]=portal->meshes[0].vertices[0].Position;
+        triangles[1][1]=portal->meshes[0].vertices[1].Position;
+        triangles[1][2]=portal->meshes[0].vertices[3].Position;
+
+
+
+        for (int i = 0; i < 2; i++) {
+            // Portal coordinates in world view
+            glm::vec4
+                    p0 = portalModel * glm::vec4(triangles[i][0], 1.f),
+                    p1 = portalModel * glm::vec4(triangles[i][1], 1.f),
+                    p2 = portalModel * glm::vec4(triangles[i][2], 1.f);
+
+            // Solve line-plane intersection using parametric form
+            glm::vec3 tuv =
+                    glm::inverse(glm::mat3(glm::vec3(la.x - lb.x, la.y - lb.y, la.z - lb.z),
+                                           glm::vec3(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z),
+                                           glm::vec3(p2.x - p0.x, p2.y - p0.y, p2.z - p0.z)))
+                    * glm::vec3(la.x - p0.x, la.y - p0.y, la.z - p0.z);
+            float t = tuv.x, u = tuv.y, v = tuv.z;
+
+            // intersection with the plane
+            if (t >= 0-1e-6 && t <= 1+1e-6) {
+                // intersection with the triangle
+                if (u >= 0-1e-6 && u <= 1+1e-6 && v >= 0-1e-6 && v <= 1+1e-6 && (u + v) <= 1+1e-6) {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
 }

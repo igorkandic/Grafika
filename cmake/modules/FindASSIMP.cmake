@@ -13,11 +13,11 @@ FIND_PATH( ASSIMP_INCLUDE_DIR assimp/mesh.h
 )
 else(UNIX AND NOT APPLE)
 	FIND_PATH( ASSIMP_INCLUDE_DIR assimp_/mesh.h
-			/usr/include
-			/usr/local/include
-			/opt/local/include
-			${CMAKE_SOURCE_DIR}/include
-			)
+	/usr/include
+	usr/local/include
+	/opt/local/include
+	${CMAKE_SOURCE_DIR}/include
+)
 endif(WIN32)
 FIND_LIBRARY( ASSIMP_LIBRARY assimp
 	/usr/lib64

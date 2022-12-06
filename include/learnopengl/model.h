@@ -190,7 +190,9 @@ private:
         for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
         {
             aiString str;
+
             mat->GetTexture(type, i, &str);
+            std::cout << str.C_Str() << std::endl;
             // check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
             bool skip = false;
             for(unsigned int j = 0; j < textures_loaded.size(); j++)
