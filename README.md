@@ -5,6 +5,7 @@ Projekat za fakultet
 
 - w/a/s/d
 - shift - sprint
+- p - toggle menu
 
 # Slike ekrana
 ![06-12-2022-03:06:58-screenshot](https://user-images.githubusercontent.com/10564596/205791162-b02c9980-9317-4345-97fb-b100053b4e06.png)
