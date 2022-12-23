@@ -8,7 +8,6 @@
 #include <stb_image.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <string>
 #include <learnopengl/model.h>
 
@@ -411,38 +410,6 @@ int main(){
             ImGui::End();
         }
 
-//        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-//        {
-//            static float f = 0.0f;
-//            static int counter = 0;
-//
-//            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-//
-//            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-//            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-//            ImGui::Checkbox("Another Window", &show_another_window);
-//
-//            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-//            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-//
-//            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-//                counter++;
-//            ImGui::SameLine();
-//            ImGui::Text("counter = %d", counter);
-//
-//            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-//            ImGui::End();
-//        }
-//
-//        // 3. Show another simple window.
-//        if (show_another_window)
-//        {
-//            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-//            ImGui::Text("Hello from another window!");
-//            if (ImGui::Button("Close Me"))
-//                show_another_window = false;
-//            ImGui::End();
-//        }
 
 
 
@@ -589,7 +556,6 @@ int main(){
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
-        //ConfigureShaderAndMatrices();
         float near_plane = .1f, far_plane = 100.f;
         glm::mat4 lightProjection = glm::perspective(glm::radians(90.f),(float)SHADOW_WIDTH/SHADOW_HEIGHT, near_plane, far_plane);
         glm::mat4 lightView = glm::lookAt(lampPos, lampPos + lampDirection, glm::vec3( 0.0f, 0.0f,  1.0f));
@@ -621,12 +587,10 @@ int main(){
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        //ConfigureShaderAndMatrices();
         shader.use();
         shader.setInt("shadowMap",3);
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, depthMap);
-        //RenderScene();
 
 
 
@@ -711,15 +675,6 @@ int main(){
         glm::mat4 clippedProjection;
         clippedProjection = glm::perspective(glm::radians(fov), 1280.0f / 720.0f, glm::distance(cameraPos, srcPos), 100.0f);
 
-//        glm::mat4 blueLightModel = glm::translate(glm::mat4(1.f), insidePos + pointLightPositions[2]);
-////        blueLightModel = glm::scale(blueLightModel, glm::vec3(2.f, 0.2f, 2.f));
-//        lightSourceShader.setMat4("model", blueLightModel);
-//        lightSourceShader.setMat4("view", destView);
-//        lightSourceShader.setMat4("projection", clippedProjection);
-//        lightSourceShader.setVec3("brightness", glm::vec3(0.1f, 0.1f, 1.f));
-//        valjakObj.Draw(lightSourceShader);
-//        lightSourceShader.setMat4("projection", projection);
-//        lightSourceShader.setMat4("view", view);
 
         shader.setMat4("projection", clippedProjection);
         glm::mat4 model = glm::mat4(1.0f);
@@ -727,14 +682,13 @@ int main(){
         model = glm::rotate(model, glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f));
         shader.setMat4("model", model);
         shader.setMat4("view", destView);
-//        tardisObj.Draw(shader);
         glDisable(GL_CULL_FACE);
         glEnable(GL_BLEND);
         shader.setMat4("model", insideModel);
         insideObj.Draw(shader);
         glDisable(GL_BLEND);
         glEnable(GL_CULL_FACE);
-//        shader.setMat4("model", amogusModel);
+
 
 
 
@@ -887,14 +841,12 @@ int main(){
         shader.setMat4("projection", projection);
         shader.setMat4("model", model);
         shader.setMat4("view", view);
-//        glDisable(GL_CULL_FACE);
+
         glEnable(GL_BLEND);
         shader.setMat4("model", insideModel);
         insideObj.Draw(shader);
         glDisable(GL_BLEND);
-//        glEnable(GL_CULL_FACE);
-//        shader.setMat4("model", amogusModel);
-//        amogusObj.Draw(shader);
+
 
 
         shader.use();
@@ -904,15 +856,7 @@ int main(){
         shader.setMat4("model", groundModel);
         groundObj.Draw(shader);
 
-//        normalShader.use();kb
-//        normalShader.setMat4("projection", projection);
-//        normalShader.setMat4("model", model);
-//        groundModel = glm::mat4(1.0f);
-//        groundModel = glm::translate(groundModel, groundPos);
-//        groundModel = glm::scale(groundModel,glm::vec3(groundSize,groundSize,groundSize));
-//        normalShader.setMat4("model", groundModel);
-//        groundObj.Draw(normalShader);
-//        shader.use();
+
 
         normalShader.use();
         normalShader.setMat4("projection", projection);
@@ -1021,12 +965,7 @@ int main(){
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
         renderQuad();
-//            shadowDebugShader.use();
-//            shadowDebugShader.setFloat("near_plane", near_plane);
-//            shadowDebugShader.setFloat("far_plane", far_plane);
-//            glActiveTexture(GL_TEXTURE0);
-//            glBindTexture(GL_TEXTURE_2D, depthMap);
-//            renderQuad();
+
 
         // Rendering
         ImGui::Render();
