@@ -8,8 +8,10 @@ Projekat za fakultet
 - p - toggle menu
 
 # Slike ekrana
-![06-12-2022-03:06:58-screenshot](https://user-images.githubusercontent.com/10564596/205791162-b02c9980-9317-4345-97fb-b100053b4e06.png)
-![06-12-2022-03:07:10-screenshot](https://user-images.githubusercontent.com/10564596/205791176-b587c480-3489-4b44-903f-b5c01f3ea3c5.png)
+![23-12-2022-15:51:57-screenshot](https://user-images.githubusercontent.com/10564596/209355416-a658cefc-210e-4bac-a6c7-9ee959b18b27.png)
+
+![23-12-2022-15:54:21-screenshot](https://user-images.githubusercontent.com/10564596/209355589-200bb314-4045-404c-bd5b-021abe42b698.png)
+
 
 
 # Oblasti
