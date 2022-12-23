@@ -28,7 +28,7 @@ file(GLOB HEADERS "include/*.h" "include/*.hpp")
 find_package(GLM REQUIRED)
 #find_package(OpenGL REQUIRED)
 find_package(GLFW3 REQUIRED)
-find_package(ASSIMP REQUIRED)
+#find_package(ASSIMP REQUIRED)
 
 add_subdirectory(libs/glad)
 add_subdirectory(libs/imgui)
@@ -48,7 +48,7 @@ elseif(UNIX AND NOT APPLE)
     find_package(X11 REQUIRED)
     # note that the order is important for setting the libs
     # use pkg-config --libs $(pkg-config --print-requires --print-requires-private glfw3) in a terminal to confirm
-    set(LIBS ${GLFW3_LIBRARY} glad X11 Xrandr Xinerama Xi Xxf86vm Xcursor GL dl pthread freetype ${ASSIMP_LIBRARY} imgui)
+    set(LIBS ${GLFW3_LIBRARY} glad X11 Xrandr Xinerama Xi Xxf86vm Xcursor GL dl pthread freetype assimp imgui)
     set (CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
 elseif(APPLE)
     INCLUDE_DIRECTORIES(/System/Library/Frameworks)

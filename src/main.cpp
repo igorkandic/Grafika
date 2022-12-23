@@ -76,7 +76,8 @@ int main(){
     Shader hdrShader("shaders/hdr.vs", "shaders/hdr.fs");
     Shader shaderBlur("shaders/blur.vs", "shaders/blur.fs");
     Shader normalShader("shaders/normal_vertex.vs", "shaders/normal_fragment.fs");
-
+    Shader depthMapShader("shaders/depthMap.vs", "shaders/depthMap.fs");
+    Shader shadowDebugShader("shaders/shadowDebug.vs","shaders/shadowDebug.fs");
 
 
 
@@ -269,6 +270,28 @@ int main(){
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
+    unsigned int depthMapFBO;
+    glGenFramebuffers(1, &depthMapFBO);
+
+    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+
+    unsigned int depthMap;
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -278,6 +301,9 @@ int main(){
 
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
+
+    shadowDebugShader.use();
+    shadowDebugShader.setInt("depthMap", 0);
 
     hdrShader.use();
     hdrShader.setInt("scene", 0);
@@ -321,7 +347,7 @@ int main(){
     glm::vec3 lampPosition = glm::vec3(5.159f, 3.820f, -3.297f);
     glm::vec3 lampDirection = glm::vec3(0.f, -1.f, 0.f);
     float lampCutOff =  25.672f;
-    float lampOuterCutOff = 54.5f;
+    float lampOuterCutOff = 40.f;
     float lampConstant = 1.f;
     float lampLinear = 0.09f;
     float lampQuadratic = 0.032;
@@ -419,12 +445,6 @@ int main(){
 //        }
 
 
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-
-        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         glm::vec3 insidePos = glm::vec3(10000.f, 0.f, 0.f);
         shader.use();
@@ -564,6 +584,49 @@ int main(){
         destModel = glm::translate(destModel, insidePos + glm::vec3(5.5, 1.5, -2.65));
 
 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        //ConfigureShaderAndMatrices();
+        float near_plane = .1f, far_plane = 100.f;
+        glm::mat4 lightProjection = glm::perspective(glm::radians(90.f),(float)SHADOW_WIDTH/SHADOW_HEIGHT, near_plane, far_plane);
+        glm::mat4 lightView = glm::lookAt(lampPos, lampPos + lampDirection, glm::vec3( 0.0f, 0.0f,  1.0f));
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+        depthMapShader.use();
+        depthMapShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        shader.use();
+        shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        depthMapShader.use();
+        //RenderScene();
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
+        glm::mat4 catModel = glm::mat4(1.0f);
+        catModel = glm::translate(catModel, catPos);
+        catModel = glm::scale(catModel, glm::vec3(catSize, catSize, catSize));
+        catModel = glm::rotate(catModel, glm::radians(catRotation), glm::vec3(0.f, 1.f, 0.f));
+        depthMapShader.setMat4("model", catModel);
+        catObj.Draw(depthMapShader);
+
+        glm::mat4 groundModel = glm::mat4(1.0f);
+        groundModel = glm::translate(groundModel, groundPos);
+        groundModel = glm::scale(groundModel,glm::vec3(groundSize,groundSize,groundSize));
+        depthMapShader.setMat4("model", groundModel);
+        groundObj.Draw(depthMapShader);
+        glCullFace(GL_BACK);
+        glDisable(GL_CULL_FACE);
+
+
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+        glViewport(0, 0, WIDTH, HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        //ConfigureShaderAndMatrices();
+        shader.use();
+        shader.setInt("shadowMap",3);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        //RenderScene();
 
 
 
@@ -731,7 +794,7 @@ int main(){
         shader.setMat4("projection", secondClippedProjection);
         shader.setMat4("view", secondDestView);
         //ovde se crta sve sto se vidi iz drugog
-        glm::mat4 groundModel = glm::mat4(1.0f);
+        groundModel = glm::mat4(1.0f);
         groundModel = glm::translate(groundModel, groundPos);
         groundModel = glm::scale(groundModel,glm::vec3(groundSize,groundSize,groundSize));
         shader.setMat4("model", groundModel);
@@ -748,7 +811,7 @@ int main(){
         sofaObj.Draw(normalShader);
         shader.use();
 
-        glm::mat4 catModel = glm::mat4(1.0f);
+        catModel = glm::mat4(1.0f);
         catModel = glm::translate(catModel, catPos);
         catModel = glm::scale(catModel, glm::vec3(catSize, catSize, catSize));
         catModel = glm::rotate(catModel, glm::radians(catRotation), glm::vec3(0.f, 1.f, 0.f));
@@ -839,8 +902,17 @@ int main(){
         groundModel = glm::translate(groundModel, groundPos);
         groundModel = glm::scale(groundModel,glm::vec3(groundSize,groundSize,groundSize));
         shader.setMat4("model", groundModel);
-
         groundObj.Draw(shader);
+
+//        normalShader.use();kb
+//        normalShader.setMat4("projection", projection);
+//        normalShader.setMat4("model", model);
+//        groundModel = glm::mat4(1.0f);
+//        groundModel = glm::translate(groundModel, groundPos);
+//        groundModel = glm::scale(groundModel,glm::vec3(groundSize,groundSize,groundSize));
+//        normalShader.setMat4("model", groundModel);
+//        groundObj.Draw(normalShader);
+//        shader.use();
 
         normalShader.use();
         normalShader.setMat4("projection", projection);
@@ -949,6 +1021,12 @@ int main(){
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
         renderQuad();
+//            shadowDebugShader.use();
+//            shadowDebugShader.setFloat("near_plane", near_plane);
+//            shadowDebugShader.setFloat("far_plane", far_plane);
+//            glActiveTexture(GL_TEXTURE0);
+//            glBindTexture(GL_TEXTURE_2D, depthMap);
+//            renderQuad();
 
         // Rendering
         ImGui::Render();
